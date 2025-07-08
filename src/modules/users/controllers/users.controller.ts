@@ -59,6 +59,6 @@ export class UsersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   getProfile(@Req() req) {
-    return req.user; // req.user được gắn khi dùng JwtAuthGuard
+    return req.user; 
   }
 }

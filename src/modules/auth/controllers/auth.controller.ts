@@ -1,10 +1,11 @@
-import { Controller, Post, Body, Req, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Req, UseGuards, Headers, UnauthorizedException, Get } from '@nestjs/common';
 import { AuthService } from '../services/auth.service';
 import { LoginDto } from '../dto/login.dto';
 import { VerifyOtpDto } from '../dto/verify-otp.dto';
 import { ForgotPasswordDto } from '../dto/forgot-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
-import { ApiOperation, ApiBody, ApiResponse } from '@nestjs/swagger';
+import { LogoutDto } from '../dto/logout.dto';
+import { ApiOperation, ApiBody, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { ResetTokenGuard } from '../guards/reset-token.guard';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 
@@ -71,5 +72,50 @@ export class AuthController {
       body.newPassword,
       body.confirmPassword,
     );
+  }
+
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Đăng xuất và blacklist token' })
+  @ApiResponse({
+    status: 200,
+    description: 'Đăng xuất thành công, token bị blacklist',
+    type: LogoutDto
+  })
+  async logout(@Headers('authorization') authHeader: string) {
+    const token = authHeader?.replace(/^Bearer\s/, '');
+    if (!token) {
+      throw new UnauthorizedException('No token provided');
+    }
+    return this.authService.logout(token);
+  }
+
+  @Get('token-info')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Lấy thông tin token hiện tại' })
+  @ApiResponse({
+    status: 200,
+    description: 'Thông tin chi tiết về token',
+    schema: {
+      example: {
+        userId: 1,
+        email: 'user@example.com',
+        role: 'user',
+        issuedAt: '2024-01-01T00:00:00.000Z',
+        expiresAt: '2024-01-01T00:15:00.000Z',
+        isExpired: false,
+        isBlacklisted: false,
+        remainingTime: 900
+      }
+    }
+  })
+  async getTokenInfo(@Headers('authorization') authHeader: string) {
+    const token = authHeader?.replace(/^Bearer\s/, '');
+    if (!token) {
+      throw new UnauthorizedException('No token provided');
+    }
+    return this.authService.getTokenInfo(token);
   }
 }
